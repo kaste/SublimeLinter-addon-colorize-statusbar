@@ -8,6 +8,7 @@ import time
 
 LEFT_IDENT = 15    # try to indent the phantoms bc it looks better
 IDLE_TIME = 10000  # show phantoms after idle time
+TIME_FOR_LINTING = 1000  # assumed time a linter runs, until we get new data
 
 PhantomSets = {}
 Cleared = set()
@@ -26,15 +27,19 @@ def get_phantom_set_for_view(view):
 class ShowPhantomsCommand(sublime_plugin.EventListener):
     def __init__(self):
         self._timeout_token = None
+        self._last_modified = None
 
     def on_post_save_async(self, view):
         if Active:
-            show_phantoms(view)
+            since_last_modified = (time.time() - self._last_modified) * 1000
+            sublime.set_timeout_async(
+                lambda: show_phantoms(view),
+                max(0, TIME_FOR_LINTING - since_last_modified))
 
     def on_modified_async(self, view):
+        self._last_modified = time.time()
         if Active:
             hide_phantoms(view)
-
 
     def on_selection_modified_async(self, view):
         if Active:
