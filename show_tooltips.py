@@ -7,12 +7,20 @@ from . import settings
 
 Settings = settings.Settings('DynamicUI')
 
+STYLESHEET = '''
+    <style>
+        div.error {
+            background-color: #af3912;
+            color: #fff;
+            padding: 0 4px;
+        }
+    </style>
+'''
 
 class ShowTooltipsSublimeLinterCommand(sublime_plugin.EventListener):
     def __init__(self):
-        self.views = {}
-        self._last_lineno = -1
-        self._last_message = ''
+        self._last_row = -1
+        self._last_html = ''
 
 
     def on_selection_modified_async(self, view):
@@ -23,54 +31,15 @@ class ShowTooltipsSublimeLinterCommand(sublime_plugin.EventListener):
         sublime.set_timeout(lambda: self.maybe_show_tooltip(view), 1000)
 
 
-    def _compute_tooltip_html(self, view):
-        # Get the line number of the first line of the first selection.
-        rowcol = view.rowcol(view.sel()[0].begin())
-        lineno = rowcol[0]
-
-        # on any vertical movement we force to see the tip
-        if lineno != self._last_lineno:
-            self._last_message = ''
-
-        self._last_lineno = lineno
-
-        all_errors = persist.errors[view.id()]
-        errors = all_errors[lineno]
-        cols = [error[0] for error in errors]
-        messages = [error[1] for error in errors]
-
-        # if we're really on the error force displaying
-        if rowcol[1] in cols:
-            self._last_message = ''
-
-        html = ('<div style="'
-                # 'background-color: #e62d96; '
-                'background-color: #af3912; '
-                'color: #fff; '
-                'padding: 0 4px">')
-        for message in messages:
-            html += "<div>{}</div>".format(message)
-
-        html += "</div>"
-
-
-        if html == self._last_message:
-            return
-        self._last_message = html
-
-        # print('New message:', html)
-
-        return html
-
     def maybe_show_tooltip(self, view):
-        # print(view.sel()[0])
         try:
             html = self._compute_tooltip_html(view)
         except (KeyError, IndexError):
-            self._last_message = ''
+            self._last_html = ''
             view.hide_popup()
             return
 
+        # The tooltips disappear automatically, no need to do anything her
         if not html:
             return
 
@@ -81,6 +50,45 @@ class ShowTooltipsSublimeLinterCommand(sublime_plugin.EventListener):
                             max_width=600, location=-1)
 
 
+    def _compute_tooltip_html(self, view):
+        # Get the line number of the first line of the first selection.
+        row, col = current_pos(view)
+
+        # on any vertical movement we force to see the tip
+        if row != self._last_row:
+            force = True
+
+        self._last_row = row
+
+        all_errors = persist.errors[view.id()]
+        errors = all_errors[row]
+
+        # if we're really on the error force displaying
+        cols = [error[0] for error in errors]
+        if col in cols:
+            force = True
+
+        messages = [error[1] for error in errors]
+        html = get_html(messages)
+
+        if not force and html == self._last_html:
+            return
+        self._last_html = html
+
+        # print('New message:', html)
+
+        return html
 
 
+def get_html(messages):
+    return (
+        STYLESHEET +
+        '<div class="error">' +
+        ''.join('<span>' + m + '</span>' for m in messages) +
+        '</div>'
+    )
 
+
+def current_pos(view):
+    # Get the line number of the first line of the first selection.
+    return view.rowcol(view.sel()[0].begin())
