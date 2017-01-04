@@ -8,7 +8,7 @@ from . import settings
 Settings = settings.Settings('DynamicUI')
 
 
-class DynamicUICommand(sublime_plugin.EventListener):
+class ShowTooltipsSublimeLinterCommand(sublime_plugin.EventListener):
     def __init__(self):
         self.views = {}
         self._last_lineno = -1

@@ -1,0 +1,15 @@
+{
+
+    "colorize-statusbar": true,
+
+    // The name of the setting we will set to true on errors. Add something
+    // like this to your theme.
+    // {
+        // "class": "status_bar",
+        // "settings": ["has_lint_errors"],
+        // "layer0.tint": [215, 57, 18], // -00
+        // "layer0.tint": [175, 57, 18], // -00
+    // }
+    "set_on_errors": "has_lint_errors",
+    "set_on_warnings": "has_lint_warnings",
+}
