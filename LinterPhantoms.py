@@ -3,9 +3,11 @@ import sublime_plugin
 from SublimeLinter.lint import persist
 
 from collections import defaultdict
+import time
 
 
-LEFT_IDENT = 15  # try to indent the phantoms bc it looks better
+LEFT_IDENT = 15    # try to indent the phantoms bc it looks better
+IDLE_TIME = 10000  # show phantoms after idle time
 
 PhantomSets = {}
 Cleared = set()
@@ -22,6 +24,9 @@ def get_phantom_set_for_view(view):
 
 
 class ShowPhantomsCommand(sublime_plugin.EventListener):
+    def __init__(self):
+        self._timeout_token = None
+
     def on_post_save_async(self, view):
         if Active:
             show_phantoms(view)
@@ -29,6 +34,20 @@ class ShowPhantomsCommand(sublime_plugin.EventListener):
     def on_modified_async(self, view):
         if Active:
             hide_phantoms(view)
+
+
+    def on_selection_modified_async(self, view):
+        if Active:
+            timeout_token = self._timeout_token = time.time()
+            sublime.set_timeout_async(
+                lambda: self._timeout_handler(timeout_token, view), IDLE_TIME)
+
+    def _timeout_handler(self, token, view):
+        if token != self._timeout_token:
+            return
+
+        if Active:
+            show_phantoms(view)
 
 
 class ToggleLinterPhantomsCommand(sublime_plugin.WindowCommand):
