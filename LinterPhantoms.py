@@ -10,12 +10,11 @@ Active = True
 LastErrors = defaultdict(list)
 Phantoms = defaultdict(dict)
 
-def PhantomSet(view):
+def get_phantom_set_for_view(view):
     try:
         return PhantomSets[view.id()]
     except KeyError:
-        set = sublime.PhantomSet(view, 'linter')
-        PhantomSets[view.id()] = set
+        set = PhantomSets[view.id()] = sublime.PhantomSet(view, 'linter')
         return set
 
 
@@ -29,11 +28,11 @@ class ShowPhantomsCommand(sublime_plugin.EventListener):
             hide_phantoms(view)
 
 
-class ClearLinterPhantomsCommand(sublime_plugin.TextCommand):
-    def run(self, edit):
+class ToggleLinterPhantomsCommand(sublime_plugin.WindowCommand):
+    def run(self):
         global Active
 
-        view = self.view
+        view = self.window.active_view()
         if view.id() not in Cleared:
             hide_phantoms(view)
             Active = False
@@ -41,19 +40,19 @@ class ClearLinterPhantomsCommand(sublime_plugin.TextCommand):
             show_phantoms(view)
             Active = True
 
-        sublime.status_message('LintPhantoms is ' +
-                               ('active' if Active else 'inactive'))
+        sublime.status_message(
+            'LintPhantoms is ' + ('active' if Active else 'inactive'))
 
 
 
 def hide_phantoms(view):
-    phantom_set = PhantomSet(view)
+    phantom_set = get_phantom_set_for_view(view)
     phantom_set.update([])
     Cleared.add(view.id())
 
 
 def show_phantoms(view, margin=0):
-    phantom_set = PhantomSet(view)
+    phantom_set = get_phantom_set_for_view(view)
     vid = view.id()
     if vid in Cleared:
         Cleared.remove(vid)
@@ -67,8 +66,7 @@ def show_phantoms(view, margin=0):
 
     if needs_update:
         LastErrors[vid] = current_errors
-        all_phantoms = gen_phantoms(view, current_errors)
-        Phantoms[vid] = all_phantoms
+        all_phantoms = Phantoms[vid] = gen_phantoms(view, current_errors)
     else:
         all_phantoms = Phantoms[vid]
 
