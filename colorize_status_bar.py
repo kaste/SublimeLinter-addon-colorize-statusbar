@@ -2,12 +2,12 @@
 import sublime
 import sublime_plugin
 
-from SublimeLinter.lint import highlight, persist
+from SublimeLinter.lint import highlight
 
 from . import settings
 
 
-Settings = settings.Settings('DynamicUI')
+Settings = settings.Settings('SublimeLinter-DynamicUI')
 
 
 class ColorizeStatusbarSublimeLinterCommand(sublime_plugin.EventListener):

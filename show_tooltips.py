@@ -5,7 +5,7 @@ from SublimeLinter.lint import persist
 from . import settings
 
 
-Settings = settings.Settings('DynamicUI')
+Settings = settings.Settings('SublimeLinter-DynamicUI')
 
 STYLESHEET = '''
     <style>
