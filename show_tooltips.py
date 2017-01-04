@@ -53,8 +53,8 @@ class ShowTooltipsSublimeLinterCommand(sublime_plugin.EventListener):
 
 
 def display_popup(view, html):
-    # The tooltips disappear automatically, no need to do anything here
     if not html:
+        view.hide_popup()
         return
 
     if view.is_popup_visible():
