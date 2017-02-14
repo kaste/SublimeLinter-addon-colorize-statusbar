@@ -1,20 +1,19 @@
 import sublime
 import sublime_plugin
+from .monkeypatch_sublimelinter import CatchSublimeLinterRuns
 from SublimeLinter.lint import persist
 
 from collections import defaultdict
-import time
 
 
 LEFT_IDENT = 15    # try to indent the phantoms bc it looks better
-IDLE_TIME = 10000  # show phantoms after idle time
-TIME_FOR_LINTING = 1000  # assumed time a linter runs, until we get new data
 
 PhantomSets = {}
 Cleared = set()
 Active = True
 LastErrors = defaultdict(list)
 Phantoms = defaultdict(dict)
+
 
 def get_phantom_set_for_view(view):
     try:
@@ -24,35 +23,14 @@ def get_phantom_set_for_view(view):
         return set
 
 
-class ShowPhantomsCommand(sublime_plugin.EventListener):
-    def __init__(self):
-        self._timeout_token = None
-        self._last_modified = None
+class ShowPhantomsCommand(sublime_plugin.EventListener,
+                          CatchSublimeLinterRuns):
 
-    def on_post_save_async(self, view):
-        if Active:
-            since_last_modified = (time.time() - self._last_modified) * 1000
-            sublime.set_timeout_async(
-                lambda: show_phantoms(view),
-                max(0, TIME_FOR_LINTING - since_last_modified))
-
-    def on_modified_async(self, view):
-        self._last_modified = time.time()
-        if Active:
-            hide_phantoms(view)
+    def on_linter_finished_async(self, view):
+        show_phantoms(view)
 
     def on_selection_modified_async(self, view):
-        if Active:
-            timeout_token = self._timeout_token = time.time()
-            sublime.set_timeout_async(
-                lambda: self._timeout_handler(timeout_token, view), IDLE_TIME)
-
-    def _timeout_handler(self, token, view):
-        if token != self._timeout_token:
-            return
-
-        if Active:
-            show_phantoms(view)
+        show_phantoms(view)
 
 
 class ToggleLinterPhantomsCommand(sublime_plugin.WindowCommand):
@@ -71,14 +49,13 @@ class ToggleLinterPhantomsCommand(sublime_plugin.WindowCommand):
             'LintPhantoms is ' + ('active' if Active else 'inactive'))
 
 
-
 def hide_phantoms(view):
     phantom_set = get_phantom_set_for_view(view)
     phantom_set.update([])
     Cleared.add(view.id())
 
 
-def show_phantoms(view, margin=0):
+def show_phantoms(view, margin=10):
     phantom_set = get_phantom_set_for_view(view)
     vid = view.id()
     if vid in Cleared:
@@ -136,7 +113,7 @@ def show_above_below_markers(view, all_phantoms):
         line_start = view.text_point(first_row, 0)
         view.show_popup(content, sublime.COOPERATE_WITH_AUTO_COMPLETE,
                         max_width=800, location=line_start)
-    if below:
+    elif below:
         content = style_messages([center('Errors below')])
         line_start = view.text_point(last_row - 2, 0)
         view.show_popup(content, sublime.COOPERATE_WITH_AUTO_COMPLETE,
@@ -147,6 +124,7 @@ def center(text, cols=80, char='&nbsp;'):
     fill_len = (cols - len(text)) // 2
     fill = fill_len * char
     return fill + text + fill
+
 
 def gen_phantoms(view, all_errors):
     # type: (...) -> Dict[Row, Phantom]
@@ -166,15 +144,13 @@ def gen_phantoms(view, all_errors):
     return phantoms
 
 
-
-
 def style_messages(messages):
     html = ('<div style="'
             # 'background-color: #e62d96; '
             # 'background-color: #af3912; '
             'background-color: #af1912; '
             'color: #fff; '
-            'padding: 2px 4px">')
+            'padding: 0px 4px">')
     for message in messages:
         html += "<div>{}</div>".format(message)
 

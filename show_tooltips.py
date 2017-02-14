@@ -3,6 +3,7 @@ import sublime_plugin
 from SublimeLinter.lint import persist
 
 from . import settings
+from .monkeypatch_sublimelinter import CatchSublimeLinterRuns
 
 
 Settings = settings.Settings('SublimeLinter-DynamicUI')
@@ -17,19 +18,21 @@ STYLESHEET = '''
     </style>
 '''
 
-class ShowTooltipsSublimeLinterCommand(sublime_plugin.EventListener):
+
+class ShowTooltipsSublimeLinterCommand(sublime_plugin.EventListener,
+                                       CatchSublimeLinterRuns):
     def __init__(self):
         self._last_row = -1
         self._last_html = ''
 
+    def on_linter_finished_async(self, view):
+        self.maybe_show_tooltip(view)
 
     def on_selection_modified_async(self, view):
         if not view.file_name():
             return
 
         sublime.set_timeout(lambda: self.maybe_show_tooltip(view), 1)
-        sublime.set_timeout(lambda: self.maybe_show_tooltip(view), 1000)
-
 
     def maybe_show_tooltip(self, view, force=False):
         # Get the line number of the first line of the first selection.
@@ -43,8 +46,8 @@ class ShowTooltipsSublimeLinterCommand(sublime_plugin.EventListener):
         errors = get_errors_on_line(view, row)
 
         # if we're really on the error force displaying
-        if any(c == col for c, m in errors):
-            force = True
+        # if any(c == col for c, m in errors):
+        #     force = True
 
         html = get_html(m for c, m in errors) if errors else ''
         if force or html != self._last_html:
@@ -70,6 +73,7 @@ def get_errors_on_line(view, row):
         return errors_by_view[row]
     except (KeyError, IndexError):
         return []
+
 
 def get_html(messages):
     return (

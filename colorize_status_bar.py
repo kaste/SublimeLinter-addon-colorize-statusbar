@@ -1,7 +1,7 @@
 
 import sublime
 import sublime_plugin
-
+from .monkeypatch_sublimelinter import CatchSublimeLinterRuns
 from SublimeLinter.lint import highlight
 
 from . import settings
@@ -10,26 +10,19 @@ from . import settings
 Settings = settings.Settings('SublimeLinter-DynamicUI')
 
 
-class ColorizeStatusbarSublimeLinterCommand(sublime_plugin.EventListener):
-    def __init__(self):
-        self._last_flag = None
+class ColorizeStatusbarSublimeLinterCommand(sublime_plugin.EventListener,
+                                            CatchSublimeLinterRuns):
 
     def on_activated_async(self, view):
         self.evaluate_linter_output(view)
 
-    def on_selection_modified_async(self, view):
-        sublime.set_timeout(lambda: self.evaluate_linter_output(view), 1000)
+    def on_linter_finished_async(self, view):
+        self.evaluate_linter_output(view)
 
     def evaluate_linter_output(self, view):
         if not Settings.get('colorize-statusbar', False):
             return
         if not view.file_name():
-            return
-
-        # Filter out panels;
-        # Also, since we used set_timeout above, ensure the user did not change
-        # the active view
-        if sublime.active_window().active_view().id() != view.id():
             return
 
         if view.get_regions(
@@ -43,10 +36,6 @@ class ColorizeStatusbarSublimeLinterCommand(sublime_plugin.EventListener):
             self.set_settings()
 
     def set_settings(self, flag=None):
-        if flag == self._last_flag:
-            return
-        self._last_flag = flag
-
         on_errors = Settings.get('set_on_errors')
         on_warnings = Settings.get('set_on_warnings')
 
@@ -60,5 +49,3 @@ class ColorizeStatusbarSublimeLinterCommand(sublime_plugin.EventListener):
         else:
             settings.erase(on_errors)
             settings.erase(on_warnings)
-
-
