@@ -67,7 +67,6 @@ def plugin_unloaded():
         sublime_linter.SublimeLinter.clear = old_clear
 
 
-
 # Without a real listener, sublime will *NOT* issue the event at all,
 # so we must register a dummy listener here.
 class SublimeLinterBroadcast(sublime_plugin.WindowCommand):
