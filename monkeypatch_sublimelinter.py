@@ -3,7 +3,10 @@ import sublime
 import sublime_plugin
 
 from SublimeLinter import sublime_linter
-old_fn = None
+
+
+old_highlight = None
+old_clear = None
 
 
 """
@@ -25,48 +28,77 @@ called with exactly one argument, the view which has been linted.
 
 """
 
-LINTER_FINISHED = 'sublinter_finished'
+BROADCAST_COMMAND = 'sublime_linter_broadcast'
+FINISHED = 'FINISHED'
+CLEAR = 'CLEAR'
 
 
 def plugin_loaded():
-    global old_fn
+    global old_highlight
+    global old_clear
 
-    old_fn = sublime_linter.SublimeLinter.highlight
+    old_highlight = sublime_linter.SublimeLinter.highlight
+    old_clear = sublime_linter.SublimeLinter.clear
 
-    def replacement(self, view, linters, hit_time):
-        old_fn(self, view, linters, hit_time)
+    def new_highlight(self, view, linters, hit_time):
+        old_highlight(self, view, linters, hit_time)
+        view.window().run_command(BROADCAST_COMMAND, {
+            'vid': view.id(), 'action': FINISHED
+        })
 
-        view.window().run_command(LINTER_FINISHED, {'vid': view.id()})
+    def new_clear(self, view):
+        old_clear(self, view)
+        view.window().run_command(BROADCAST_COMMAND, {
+            'vid': view.id(), 'action': CLEAR
+        })
 
-    sublime_linter.SublimeLinter.highlight = replacement
+    sublime_linter.SublimeLinter.highlight = new_highlight
+    sublime_linter.SublimeLinter.clear = new_clear
 
 
 def plugin_unloaded():
-    global old_fn
+    global old_highlight
+    global old_clear
 
-    if old_fn:
-        sublime_linter.SublimeLinter.highlight = old_fn
+    if old_highlight:
+        sublime_linter.SublimeLinter.highlight = old_highlight
+
+    if old_clear:
+        sublime_linter.SublimeLinter.clear = old_clear
+
 
 
 # Without a real listener, sublime will *NOT* issue the event at all,
 # so we must register a dummy listener here.
-class SublinterFinished(sublime_plugin.WindowCommand):
+class SublimeLinterBroadcast(sublime_plugin.WindowCommand):
     def run(self, *args, **kwargs):
         pass
 
 
 class CatchSublimeLinterRuns:
     def on_window_command(self, window, command_name, kwargs):
-        if command_name != LINTER_FINISHED:
+        if command_name != BROADCAST_COMMAND:
             return
+
         vid = kwargs['vid']
+        action = kwargs['action']
 
         for view in window.views():
             if view.id() == vid:
-                sublime.set_timeout_async(
-                    lambda: self.on_linter_finished_async(view))
-                return
+                if action == FINISHED:
+                    sublime.set_timeout_async(
+                        lambda: self.on_linter_finished_async(view))
+                elif action == CLEAR:
+                    sublime.set_timeout_async(
+                        lambda: self.on_clear_async(view))
+
+                break
 
     def on_linter_finished_async(self, view):
-        """Callback to be invoked when a view has been linted."""
+        """Callback to be invoked after a view has been linted."""
         pass
+
+    def on_clear_async(self, view):
+        """Callback to be invoked after a view has been linted."""
+        pass
+

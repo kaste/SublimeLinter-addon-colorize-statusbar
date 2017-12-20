@@ -9,6 +9,7 @@ from collections import defaultdict
 
 
 LEFT_IDENT = 15    # try to indent the phantoms bc it looks better
+PHANTOM_SET_NAME = 'sublime_linter'
 
 PhantomSets = {}
 Cleared = set()
@@ -21,7 +22,8 @@ def get_phantom_set_for_view(view):
     try:
         return PhantomSets[view.id()]
     except KeyError:
-        set = PhantomSets[view.id()] = sublime.PhantomSet(view, 'linter')
+        set = PhantomSets[view.id()] = sublime.PhantomSet(view,
+                                                          PHANTOM_SET_NAME)
         return set
 
 
@@ -30,6 +32,9 @@ class ShowPhantomsCommand(sublime_plugin.EventListener,
 
     def on_linter_finished_async(self, view):
         show_phantoms(view)
+
+    def on_clear_async(self, view):
+        clear_phantoms(view)
 
     def on_selection_modified_async(self, view):
         sublime.set_timeout(lambda: show_phantoms(view), 1)
@@ -50,6 +55,11 @@ class ToggleLinterPhantomsCommand(sublime_plugin.WindowCommand):
 
         sublime.status_message(
             'LintPhantoms is ' + ('active' if Active else 'inactive'))
+
+
+def clear_phantoms(view):
+    print('############# clear_phantoms')
+    view.erase_phantoms(PHANTOM_SET_NAME)
 
 
 def hide_phantoms(view):
