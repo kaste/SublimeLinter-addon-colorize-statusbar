@@ -81,16 +81,16 @@ class CatchSublimeLinterRuns:
         vid = kwargs['vid']
         action = kwargs['action']
 
-        for view in window.views():
-            if view.id() == vid:
-                if action == FINISHED:
-                    sublime.set_timeout_async(
-                        lambda: self.on_linter_finished_async(view))
-                elif action == CLEAR:
-                    sublime.set_timeout_async(
-                        lambda: self.on_clear_async(view))
+        view = find_view_by_id(vid, [window])
+        if not view:
+            return
 
-                break
+        if action == FINISHED:
+            sublime.set_timeout_async(
+                lambda: self.on_linter_finished_async(view))
+        elif action == CLEAR:
+            sublime.set_timeout_async(
+                lambda: self.on_clear_async(view))
 
     def on_linter_finished_async(self, view):
         """Callback to be invoked after a view has been linted."""
@@ -100,3 +100,12 @@ class CatchSublimeLinterRuns:
         """Callback to be invoked after a view has been linted."""
         pass
 
+
+def find_view_by_id(vid, windows=None):
+    if windows is None:
+        windows = sublime.windows()
+
+    for window in windows:
+        for view in window.views():
+            if view.id() == vid:
+                return view

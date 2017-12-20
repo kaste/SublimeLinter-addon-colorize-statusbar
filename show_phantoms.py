@@ -2,7 +2,7 @@ from itertools import chain
 
 import sublime
 import sublime_plugin
-from .monkeypatch_sublimelinter import CatchSublimeLinterRuns
+from .monkeypatch_sublimelinter import CatchSublimeLinterRuns, find_view_by_id
 from SublimeLinter.lint import persist
 
 from collections import defaultdict
@@ -25,6 +25,13 @@ def get_phantom_set_for_view(view):
         set = PhantomSets[view.id()] = sublime.PhantomSet(view,
                                                           PHANTOM_SET_NAME)
         return set
+
+
+def plugin_unloaded():
+    for vid in PhantomSets.keys():
+        view = find_view_by_id(vid)
+        if view:
+            clear_phantoms(view)
 
 
 class ShowPhantomsCommand(sublime_plugin.EventListener,
@@ -58,7 +65,6 @@ class ToggleLinterPhantomsCommand(sublime_plugin.WindowCommand):
 
 
 def clear_phantoms(view):
-    print('############# clear_phantoms')
     view.erase_phantoms(PHANTOM_SET_NAME)
 
 

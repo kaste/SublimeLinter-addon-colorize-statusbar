@@ -1,4 +1,3 @@
-
 import sublime
 import sublime_plugin
 from .monkeypatch_sublimelinter import CatchSublimeLinterRuns
