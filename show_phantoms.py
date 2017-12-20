@@ -1,3 +1,5 @@
+from itertools import chain
+
 import sublime
 import sublime_plugin
 from .monkeypatch_sublimelinter import CatchSublimeLinterRuns
@@ -10,7 +12,7 @@ LEFT_IDENT = 15    # try to indent the phantoms bc it looks better
 
 PhantomSets = {}
 Cleared = set()
-Active = True
+Active = False
 LastErrors = defaultdict(list)
 Phantoms = defaultdict(dict)
 
@@ -30,7 +32,8 @@ class ShowPhantomsCommand(sublime_plugin.EventListener,
         show_phantoms(view)
 
     def on_selection_modified_async(self, view):
-        show_phantoms(view)
+        sublime.set_timeout(lambda: show_phantoms(view), 1)
+        # show_phantoms(view)
 
 
 class ToggleLinterPhantomsCommand(sublime_plugin.WindowCommand):
@@ -55,16 +58,16 @@ def hide_phantoms(view):
     Cleared.add(view.id())
 
 
-def show_phantoms(view, margin=10):
+def show_phantoms(view, margin=1):
     phantom_set = get_phantom_set_for_view(view)
     vid = view.id()
     if vid in Cleared:
         Cleared.remove(vid)
 
     try:
-        current_errors = persist.errors[view.id()]
+        current_errors = persist.errors[view.id()]['line_dicts']
     except KeyError:
-        current_errors = []
+        current_errors = {}
 
     needs_update = LastErrors[vid] != current_errors
 
@@ -77,12 +80,12 @@ def show_phantoms(view, margin=10):
     # I had this; ah well... If you set a margin, phantoms around the current,
     # edited line will not be drawn to reduce clutter.
     cr = current_row(view)
-    rg = range(cr - margin, cr + margin) if cr else []
+    rg = range(cr - margin + 1, cr + margin) if cr else []
     phantoms = [phantom for row, phantom in all_phantoms.items()
                 if row not in rg]
     phantom_set.update(phantoms)
 
-    show_above_below_markers(view, all_phantoms)
+    # show_above_below_markers(view, all_phantoms)
 
 
 def show_above_below_markers(view, all_phantoms):
@@ -131,28 +134,47 @@ def gen_phantoms(view, all_errors):
 
     phantoms = {}
     for (row, errors) in all_errors.items():
-        html = style_messages({error[1] for error in errors})
+        html = style_messages(
+            {error['msg'] for error
+             in chain(errors['error'], errors['warning'])})
 
-        line_start = view.text_point(row, 0)
-        prev_line_len = (line_start - 1) - view.text_point(row - 1, 0)
-        region = sublime.Region(
-            view.text_point(row - 1, min(LEFT_IDENT, prev_line_len)))
-        layout = sublime.LAYOUT_BELOW
+        last_char = last_char_of_row(view, row)
+        region = sublime.Region(last_char)
+        layout = sublime.LAYOUT_INLINE
 
         phantoms[row] = sublime.Phantom(region, html, layout)
+    # for (row, errors) in all_errors.items():
+    #     html = style_messages({error[1] for error in errors})
+
+    #     line_start = view.text_point(row, 0)
+    #     prev_line_len = (line_start - 1) - view.text_point(row - 1, 0)
+    #     region = sublime.Region(
+    #         view.text_point(row - 1, min(LEFT_IDENT, prev_line_len)))
+    #     layout = sublime.LAYOUT_BELOW
+
+    #     phantoms[row] = sublime.Phantom(region, html, layout)
 
     return phantoms
 
 
 def style_messages(messages):
     html = ('<div style="'
-            # 'background-color: #e62d96; '
-            # 'background-color: #af3912; '
+            'background-color: #e62d96; '
+            # 'background-color: #ff3737; '
+            # 'background-color: #df5912; '
             'background-color: #af1912; '
-            'color: #fff; '
-            'padding: 0px 4px">')
+            'background-color: transparent; '
+            # 'border-left: 1px solid #af1912;'
+            # 'background-color: #111; '
+            'font-size: .9em;'
+            'color: #777; '
+            # 'color: #110; '
+            # 'color: #fff; '
+            # 'color: #df5912; '
+            'padding: 0px 1px; margin-top: 1px; margin-left: 4px;">')
     for message in messages:
-        html += "<div>{}</div>".format(message)
+        html += "<span>{}</span> ".format(message)
+        break
 
     html += "</div>"
     return html
@@ -166,3 +188,7 @@ def current_row(view):
 
     selected_row, _ = view.rowcol(cursor.begin())
     return selected_row
+
+
+def last_char_of_row(view, row):
+    return (view.text_point(row + 1, 0) - 1)

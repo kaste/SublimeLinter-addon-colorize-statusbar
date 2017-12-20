@@ -2,7 +2,7 @@
 import sublime
 import sublime_plugin
 
-from SublimeLinter import sublimelinter
+from SublimeLinter import sublime_linter
 old_fn = None
 
 
@@ -31,21 +31,21 @@ LINTER_FINISHED = 'sublinter_finished'
 def plugin_loaded():
     global old_fn
 
-    old_fn = sublimelinter.SublimeLinter.highlight
+    old_fn = sublime_linter.SublimeLinter.highlight
 
     def replacement(self, view, linters, hit_time):
         old_fn(self, view, linters, hit_time)
 
         view.window().run_command(LINTER_FINISHED, {'vid': view.id()})
 
-    sublimelinter.SublimeLinter.highlight = replacement
+    sublime_linter.SublimeLinter.highlight = replacement
 
 
 def plugin_unloaded():
     global old_fn
 
     if old_fn:
-        sublimelinter.SublimeLinter.highlight = old_fn
+        sublime_linter.SublimeLinter.highlight = old_fn
 
 
 # Without a real listener, sublime will *NOT* issue the event at all,

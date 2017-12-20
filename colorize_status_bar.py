@@ -2,7 +2,7 @@
 import sublime
 import sublime_plugin
 from .monkeypatch_sublimelinter import CatchSublimeLinterRuns
-from SublimeLinter.lint import highlight
+from SublimeLinter.lint import persist
 
 from . import settings
 
@@ -25,12 +25,14 @@ class ColorizeStatusbarSublimeLinterCommand(sublime_plugin.EventListener,
         if not view.file_name():
             return
 
-        if view.get_regions(
-                highlight.MARK_KEY_FORMAT.format(highlight.ERROR)):
-            self.set_settings('errors')
+        try:
+            current_errors = persist.errors[view.id()]['we_count_view']
+        except KeyError:
+            return
 
-        elif view.get_regions(
-                highlight.MARK_KEY_FORMAT.format(highlight.WARNING)):
+        if current_errors['error'] > 0:
+            self.set_settings('errors')
+        elif current_errors['warning'] > 0:
             self.set_settings('warnings')
         else:
             self.set_settings()

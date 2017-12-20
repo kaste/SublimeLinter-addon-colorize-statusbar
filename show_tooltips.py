@@ -1,3 +1,5 @@
+from itertools import chain
+
 import sublime
 import sublime_plugin
 from SublimeLinter.lint import persist
@@ -12,8 +14,12 @@ STYLESHEET = '''
     <style>
         div.error {
             background-color: #af3912;
+            background-color: transparent;
+            font-size: .9em;
+
             color: #fff;
-            padding: 0 4px;
+            padding: 0 1px;
+            margin-left: 8px;
         }
     </style>
 '''
@@ -49,7 +55,12 @@ class ShowTooltipsSublimeLinterCommand(sublime_plugin.EventListener,
         # if any(c == col for c, m in errors):
         #     force = True
 
-        html = get_html(m for c, m in errors) if errors else ''
+        if errors:
+            html = get_html(err['msg'] for err
+                            in chain(errors['error'], errors['warning']))
+        else:
+            html = ''
+
         if force or html != self._last_html:
             display_popup(view, html)
         self._last_html = html
@@ -63,16 +74,17 @@ def display_popup(view, html):
     if view.is_popup_visible():
         view.update_popup(html)
     else:
+        row, _ = current_pos(view)
+        last_char = last_char_of_row(view, row)
         view.show_popup(html, sublime.COOPERATE_WITH_AUTO_COMPLETE,
-                        max_width=600, location=-1)
+                        max_width=600, location=last_char)
 
 
 def get_errors_on_line(view, row):
     try:
-        errors_by_view = persist.errors[view.id()]
-        return errors_by_view[row]
+        return persist.errors[view.id()]['line_dicts'][row]
     except (KeyError, IndexError):
-        return []
+        return {}
 
 
 def get_html(messages):
@@ -87,3 +99,7 @@ def get_html(messages):
 def current_pos(view):
     # Get the line number of the first line of the first selection.
     return view.rowcol(view.sel()[0].begin())
+
+
+def last_char_of_row(view, row):
+    return (view.text_point(row + 1, 0) - 1)
