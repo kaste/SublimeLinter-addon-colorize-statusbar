@@ -13,10 +13,7 @@ old_clear = None
 Monkeypatch core SublimeLinter so that it will send events after linting a
 file has finished.
 
-For convenience, a class is provided which users can inherit from. A new
-`on_linter_finished_async` callback must be implemented by the user. It gets
-called with exactly one argument, the view which has been linted.
-
+For convenience, a mixin class is provided which users can inherit from.
 
     class MySuperNewAnnotator(sublime_plugin.EventListener,
                               CatchSublimeLinterRuns):
@@ -25,6 +22,8 @@ called with exactly one argument, the view which has been linted.
             # Do something useful here
             ...
 
+        def on_clear_async(self, view):
+            ...
 
 """
 
