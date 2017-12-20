@@ -13,8 +13,7 @@ Settings = settings.Settings('SublimeLinter-DynamicUI')
 STYLESHEET = '''
     <style>
         div.error {
-            background-color: #af3912;
-            background-color: transparent;
+            background-color: #af1912;
             font-size: .9em;
 
             color: #fff;

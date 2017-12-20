@@ -173,13 +173,13 @@ def style_messages(messages):
             # 'background-color: #ff3737; '
             # 'background-color: #df5912; '
             'background-color: #af1912; '
-            'background-color: transparent; '
+            # 'background-color: transparent; '
             # 'border-left: 1px solid #af1912;'
             # 'background-color: #111; '
             'font-size: .9em;'
             'color: #777; '
             # 'color: #110; '
-            # 'color: #fff; '
+            'color: #fff; '
             # 'color: #df5912; '
             'padding: 0px 1px; margin-top: 1px; margin-left: 4px;">')
     for message in messages:
