@@ -1,21 +1,17 @@
-from itertools import chain
-
 import sublime
 import sublime_plugin
-from .monkeypatch_sublimelinter import CatchSublimeLinterRuns, find_view_by_id
-from SublimeLinter.lint import persist
+from SublimeLinter.lint import persist, events
 
 from collections import defaultdict
 
 
-LEFT_IDENT = 15    # try to indent the phantoms bc it looks better
 PHANTOM_SET_NAME = 'sublime_linter'
 
+State = {}
 PhantomSets = {}
-Cleared = set()
-Active = False
 LastErrors = defaultdict(list)
 Phantoms = defaultdict(dict)
+InvalidBuffer = set()
 
 
 def get_phantom_set_for_view(view):
@@ -27,122 +23,103 @@ def get_phantom_set_for_view(view):
         return set
 
 
+def plugin_loaded():
+    events.subscribe(events.LINT_RESULT, on_lint_result)
+
+    State.update({
+        'active_view': sublime.active_window().active_view(),
+        'errors': []
+    })
+
+
 def plugin_unloaded():
+    events.unsubscribe(events.LINT_RESULT, on_lint_result)
+
     for vid in PhantomSets.keys():
-        view = find_view_by_id(vid)
+        view = sublime.View(vid)
         if view:
             clear_phantoms(view)
 
 
-class ShowPhantomsCommand(sublime_plugin.EventListener,
-                          CatchSublimeLinterRuns):
+def on_lint_result(buffer_id, **kwargs):
+    active_view = State['active_view']
+    if active_view.buffer_id() != buffer_id:
+        return
 
-    def on_linter_finished_async(self, view):
-        show_phantoms(view)
+    InvalidBuffer.discard(buffer_id)
+    State.update({
+        'errors': get_errors(active_view)
+    })
+    draw(**State)
 
-    def on_clear_async(self, view):
-        clear_phantoms(view)
+
+class ShowPhantomsCommand(sublime_plugin.EventListener):
+    def on_activated_async(self, active_view):
+        State.update({
+            'active_view': active_view,
+            'errors': get_errors(active_view)
+        })
+
+    def on_modified(self, view):
+        active_view = State['active_view']
+        # It is possible that views (e.g. panels) update in the background.
+        # So we check here and return early.
+        if active_view.buffer_id() != view.buffer_id():
+            return
+
+        InvalidBuffer.add(active_view.buffer_id())
 
     def on_selection_modified_async(self, view):
-        sublime.set_timeout(lambda: show_phantoms(view), 1)
-        # show_phantoms(view)
+        active_view = State['active_view']
+        # It is possible that views (e.g. panels) update in the background.
+        # So we check here and return early.
+        if active_view.buffer_id() != view.buffer_id():
+            return
+
+        sublime.set_timeout(lambda: draw(**State), 1)
 
 
-class ToggleLinterPhantomsCommand(sublime_plugin.WindowCommand):
-    def run(self):
-        global Active
-
-        view = self.window.active_view()
-        if view.id() not in Cleared:
-            hide_phantoms(view)
-            Active = False
-        else:
-            show_phantoms(view)
-            Active = True
-
-        sublime.status_message(
-            'LintPhantoms is ' + ('active' if Active else 'inactive'))
+def get_errors(view):
+    errors = sorted(
+        persist.errors[view.buffer_id()],
+        key=lambda e: (e['line'], e['error_type'], e['start'], e['linter'])
+    )
+    errors_by_line = defaultdict(list)
+    for error in errors:
+        pos = view.text_point(error['line'], error['end'])
+        row, _col = view.rowcol(pos)
+        if row != error['line']:  # for now skip multi-line errors
+            continue
+        errors_by_line[row].append(error)
+    return errors_by_line
 
 
 def clear_phantoms(view):
     view.erase_phantoms(PHANTOM_SET_NAME)
 
 
-def hide_phantoms(view):
-    phantom_set = get_phantom_set_for_view(view)
-    phantom_set.update([])
-    Cleared.add(view.id())
+def draw(active_view, errors, margin=1, **kwargs):
+    if active_view.buffer_id() in InvalidBuffer:
+        return
 
+    phantom_set = get_phantom_set_for_view(active_view)
+    vid = active_view.id()
 
-def show_phantoms(view, margin=1):
-    phantom_set = get_phantom_set_for_view(view)
-    vid = view.id()
-    if vid in Cleared:
-        Cleared.remove(vid)
-
-    try:
-        current_errors = persist.errors[view.id()]['line_dicts']
-    except KeyError:
-        current_errors = {}
-
-    needs_update = LastErrors[vid] != current_errors
+    needs_update = LastErrors[vid] != errors
 
     if needs_update:
-        LastErrors[vid] = current_errors
-        all_phantoms = Phantoms[vid] = gen_phantoms(view, current_errors)
+        LastErrors[vid] = errors
+        all_phantoms = Phantoms[vid] = gen_phantoms(active_view, errors)
     else:
         all_phantoms = Phantoms[vid]
 
-    # I had this; ah well... If you set a margin, phantoms around the current,
+    # If you set a margin, phantoms around the current,
     # edited line will not be drawn to reduce clutter.
-    cr = current_row(view)
-    rg = range(cr - margin + 1, cr + margin) if cr else []
+    cr = current_row(active_view)
+    rg = range(cr - margin + 1, cr + margin) if cr is not None else []
     phantoms = [phantom for row, phantom in all_phantoms.items()
                 if row not in rg]
     phantom_set.update(phantoms)
-
-    # show_above_below_markers(view, all_phantoms)
-
-
-def show_above_below_markers(view, all_phantoms):
-    visible_region = view.visible_region()
-    first_row, _ = view.rowcol(visible_region.begin())
-    last_row, _ = view.rowcol(visible_region.end())
-
-    above = False
-    below = False
-    for row in sorted(all_phantoms.keys()):
-        if row < first_row - 1:
-            above = True
-        elif row > last_row + 1:
-            if above:
-                # If we're here we're below the visible region, and since we
-                # only show above or below, we can break
-                break
-            below = True
-        elif first_row - 1 < row < last_row + 1:
-            # We already show phantoms within the visible region and don't want
-            # to distract even more
-            return
-
-    # Although above and below could be True at the same time as a fact, we can
-    # only show one popup at any time. So we just shortcut here:
-    if above:
-        content = style_messages([center('Errors above')])
-        line_start = view.text_point(first_row, 0)
-        view.show_popup(content, sublime.COOPERATE_WITH_AUTO_COMPLETE,
-                        max_width=800, location=line_start)
-    elif below:
-        content = style_messages([center('Errors below')])
-        line_start = view.text_point(last_row - 2, 0)
-        view.show_popup(content, sublime.COOPERATE_WITH_AUTO_COMPLETE,
-                        max_width=800, location=line_start)
-
-
-def center(text, cols=80, char='&nbsp;'):
-    fill_len = (cols - len(text)) // 2
-    fill = fill_len * char
-    return fill + text + fill
 
 
 def gen_phantoms(view, all_errors):
@@ -150,42 +127,30 @@ def gen_phantoms(view, all_errors):
 
     phantoms = {}
     for (row, errors) in all_errors.items():
-        html = style_messages(
-            {error['msg'] for error
-             in chain(errors['error'], errors['warning'])})
+        html = style_messages({error['msg'] for error in errors})
 
         last_char = last_char_of_row(view, row)
         region = sublime.Region(last_char)
         layout = sublime.LAYOUT_INLINE
 
         phantoms[row] = sublime.Phantom(region, html, layout)
-    # for (row, errors) in all_errors.items():
-    #     html = style_messages({error[1] for error in errors})
-
-    #     line_start = view.text_point(row, 0)
-    #     prev_line_len = (line_start - 1) - view.text_point(row - 1, 0)
-    #     region = sublime.Region(
-    #         view.text_point(row - 1, min(LEFT_IDENT, prev_line_len)))
-    #     layout = sublime.LAYOUT_BELOW
-
-    #     phantoms[row] = sublime.Phantom(region, html, layout)
 
     return phantoms
 
 
 def style_messages(messages):
     html = ('<div style="'
-            'background-color: #e62d96; '
+            # 'background-color: #e62d96; '
             # 'background-color: #ff3737; '
             # 'background-color: #df5912; '
             'background-color: #af1912; '
-            # 'background-color: transparent; '
+            'background-color: transparent; '
             # 'border-left: 1px solid #af1912;'
             # 'background-color: #111; '
             'font-size: .9em;'
             'color: #777; '
             # 'color: #110; '
-            'color: #fff; '
+            # 'color: #ddd; '
             # 'color: #df5912; '
             'padding: 0px 1px; margin-top: 1px; margin-left: 4px;">')
     for message in messages:
@@ -202,8 +167,8 @@ def current_row(view):
     except IndexError:
         return
 
-    selected_row, _ = view.rowcol(cursor.begin())
-    return selected_row
+    row, _ = view.rowcol(cursor.begin())
+    return row
 
 
 def last_char_of_row(view, row):

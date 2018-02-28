@@ -1,103 +1,145 @@
-from itertools import chain
+from functools import lru_cache
 
 import sublime
 import sublime_plugin
-from SublimeLinter.lint import persist
+from SublimeLinter.lint import persist, events
 
 from . import settings
-from .monkeypatch_sublimelinter import CatchSublimeLinterRuns
 
 
 Settings = settings.Settings('SublimeLinter-DynamicUI')
-
 STYLESHEET = '''
     <style>
         div.error {
             background-color: #af1912;
             font-size: .9em;
 
-            color: #fff;
+            color: #ddd;
             padding: 0 1px;
             margin-left: 8px;
         }
     </style>
 '''
 
-
-class ShowTooltipsSublimeLinterCommand(sublime_plugin.EventListener,
-                                       CatchSublimeLinterRuns):
-    def __init__(self):
-        self._last_row = -1
-        self._last_html = ''
-
-    def on_linter_finished_async(self, view):
-        self.maybe_show_tooltip(view)
-
-    def on_selection_modified_async(self, view):
-        if not view.file_name():
-            return
-
-        sublime.set_timeout(lambda: self.maybe_show_tooltip(view), 1)
-
-    def maybe_show_tooltip(self, view, force=False):
-        # Get the line number of the first line of the first selection.
-        row, col = current_pos(view)
-
-        # on any vertical movement we force to see the tip
-        if row != self._last_row:
-            force = True
-        self._last_row = row
-
-        errors = get_errors_on_line(view, row)
-
-        # if we're really on the error force displaying
-        # if any(c == col for c, m in errors):
-        #     force = True
-
-        if errors:
-            html = get_html(err['msg'] for err
-                            in chain(errors['error'], errors['warning']))
-        else:
-            html = ''
-
-        if force or html != self._last_html:
-            display_popup(view, html)
-        self._last_html = html
+State = {}
 
 
-def display_popup(view, html):
-    if not html:
-        view.hide_popup()
+def plugin_loaded():
+    State.update({
+        'active_view': sublime.active_window().active_view(),
+        'current_pos': (-1, -1),
+        'errors': []
+    })
+
+    events.subscribe(events.LINT_RESULT, on_lint_result)
+
+
+def plugin_unloaded():
+    events.unsubscribe(events.LINT_RESULT, on_lint_result)
+
+
+def on_lint_result(buffer_id, **kwargs):
+    active_view = State['active_view']
+    if active_view.buffer_id() != buffer_id:
         return
 
-    if view.is_popup_visible():
+    State.update({
+        'errors': get_errors(active_view)
+    })
+    draw(**State)
+
+
+class ShowTooltipsSublimeLinterCommand(sublime_plugin.EventListener):
+    def on_activated_async(self, active_view):
+        row, col = get_current_pos(active_view)
+
+        State.update({
+            'active_view': active_view,
+            'current_pos': (row, col),
+            'errors': get_errors(active_view)
+        })
+
+    def on_selection_modified_async(self, view):
+        active_view = State['active_view']
+        # It is possible that views (e.g. panels) update in the background.
+        # So we check here and return early.
+        if active_view.buffer_id() != view.buffer_id():
+            return
+
+        State.update({
+            'current_pos': get_current_pos(active_view)
+        })
+
+        # sublime.set_timeout_async(lambda: draw(**State), 1)
+        draw(**State)
+
+
+_last_row = None
+_last_errors_under_cursor = []
+
+
+def draw(active_view, current_pos, errors, **kwargs):
+    global _last_row, _last_errors_under_cursor
+
+    row, col = current_pos
+
+    errors_on_line = [error for error in errors if error['line'] == row]
+    errors_under_cursor = [
+        error for error in errors_on_line
+        if error['start'] <= col <= error['end']]
+
+    errors_to_show = errors_under_cursor or errors_on_line
+
+    if (
+        row == _last_row and
+        (len(errors_under_cursor) == 0 or
+         len(_last_errors_under_cursor) == len(errors_under_cursor))
+    ):
+        errors_to_show = []
+
+    _last_row = row
+    _last_errors_under_cursor = errors_under_cursor
+
+    html = get_html(
+        error['msg'] for error in errors_to_show)
+    display_popup(active_view.id(), html, row)
+
+
+def get_errors(view):
+    return sorted(
+        persist.errors[view.buffer_id()],
+        key=lambda e: (e['line'], e['error_type'], e['start'], e['linter'])
+    )
+
+
+@lru_cache(maxsize=1)
+def display_popup(vid, html, row):
+    view = sublime.View(vid)
+    if not html:
+        view.hide_popup()
+    elif view.is_popup_visible():
         view.update_popup(html)
     else:
-        row, _ = current_pos(view)
         last_char = last_char_of_row(view, row)
         view.show_popup(html, sublime.COOPERATE_WITH_AUTO_COMPLETE,
                         max_width=600, location=last_char)
 
 
-def get_errors_on_line(view, row):
-    try:
-        return persist.errors[view.id()]['line_dicts'][row]
-    except (KeyError, IndexError):
-        return {}
-
-
 def get_html(messages):
+    message_divs = ''.join('<div>' + m + '</div>' for m in messages)
     return (
         STYLESHEET +
         '<div class="error">' +
-        ''.join('<div>' + m + '</div>' for m in messages) +
+        message_divs +
         '</div>'
-    )
+    ) if message_divs else ''
 
 
-def current_pos(view):
-    # Get the line number of the first line of the first selection.
-    return view.rowcol(view.sel()[0].begin())
+def get_current_pos(view):
+    try:
+        return view.rowcol(view.sel()[0].begin())
+    except (AttributeError, IndexError):
+        return -1, -1
 
 
 def last_char_of_row(view, row):
