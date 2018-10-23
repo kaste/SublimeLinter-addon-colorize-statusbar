@@ -29,7 +29,8 @@ def plugin_loaded():
     State.update(
         {
             'active_view': sublime.active_window().active_view(),
-            'current_pos': (-1, -1),
+            'current_pos': (None, None),
+            'prev_pos': (None, None),
             'errors': [],
         }
     )
@@ -52,14 +53,13 @@ def on_lint_result(buffer_id, **kwargs):
 
 class ShowTooltipsSublimeLinterCommand(sublime_plugin.EventListener):
     def on_activated_async(self, active_view):
-        prev_pos = State['current_pos']
         current_pos = get_current_pos(active_view)
 
         State.update(
             {
                 'active_view': active_view,
                 'current_pos': current_pos,
-                'prev_pos': prev_pos,
+                'prev_pos': (None, None),
                 'errors': get_errors(active_view),
             }
         )
@@ -89,6 +89,9 @@ _last_messages = ''
 
 def draw(active_view, current_pos, prev_pos, errors, **kwargs):
     if not Settings.get('tooltips', False):
+        return
+
+    if current_pos == (None, None):
         return
 
     global _last_errors_under_cursor, _last_messages
@@ -165,9 +168,9 @@ def get_html(messages):
 def get_current_pos(view):
     try:
         sel = view.sel()[0]
-        return view.rowcol(sel.begin()) if sel.empty() else (-1, -1)
+        return view.rowcol(sel.begin()) if sel.empty() else (None, None)
     except (AttributeError, IndexError):
-        return -1, -1
+        return (None, None)
 
 
 def last_char_of_row(view, row):
