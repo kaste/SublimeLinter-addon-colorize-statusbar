@@ -46,7 +46,6 @@ def on_lint_result(buffer_id, **kwargs):
     if active_view.buffer_id() != buffer_id:
         return
 
-    _invalid_buffer.discard(buffer_id)
     State.update({'errors': get_errors(active_view)})
     draw(**State)
 
@@ -62,15 +61,6 @@ class ShowTooltipsSublimeLinterCommand(sublime_plugin.EventListener):
                 'errors': get_errors(active_view),
             }
         )
-
-    def on_modified(self, view):
-        active_view = State['active_view']
-        # It is possible that views (e.g. panels) update in the background.
-        # So we check here and return early.
-        if active_view.buffer_id() != view.buffer_id():
-            return
-
-        _invalid_buffer.add(active_view.buffer_id())
 
     def on_selection_modified_async(self, view):
         active_view = State['active_view']
@@ -94,7 +84,6 @@ _last_row = None
 _last_col = None
 _last_errors_under_cursor = []
 _last_messages = ''
-_invalid_buffer = set()
 
 
 def draw(active_view, current_pos, errors, **kwargs):
