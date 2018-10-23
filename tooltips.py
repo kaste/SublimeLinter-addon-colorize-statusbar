@@ -164,7 +164,8 @@ def get_html(messages):
 
 def get_current_pos(view):
     try:
-        return view.rowcol(view.sel()[0].begin())
+        sel = view.sel()[0]
+        return view.rowcol(sel.begin()) if sel.empty() else (-1, -1)
     except (AttributeError, IndexError):
         return -1, -1
 
