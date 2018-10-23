@@ -8,7 +8,7 @@ from SublimeLinter.lint import persist, events
 from . import settings
 
 
-Settings = settings.Settings('SublimeLinter-DynamicUI')
+Settings = settings.Settings('SublimeLinter-addon-alt-ui')
 
 PHANTOM_SET_NAME = 'sublime_linter'
 
@@ -101,7 +101,7 @@ def clear_phantoms(view):
 
 
 def draw(active_view, errors, margin=1, **kwargs):
-    if not Settings.get('annotate', False):
+    if not Settings.get('annotations', False):
         return
 
     if active_view.buffer_id() in InvalidBuffer:

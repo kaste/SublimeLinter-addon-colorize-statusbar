@@ -9,7 +9,7 @@ CHILL_TIME = 3
 DEBOUNCE_KEY = 'SL-ui-colorize-status-bar'
 
 
-Settings = settings.Settings('SublimeLinter-DynamicUI')
+Settings = settings.Settings('SublimeLinter-addon-alt-ui')
 State = {}
 
 

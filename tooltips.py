@@ -7,7 +7,7 @@ from SublimeLinter.lint import persist, events
 from . import settings
 
 
-Settings = settings.Settings('SublimeLinter-DynamicUI')
+Settings = settings.Settings('SublimeLinter-addon-alt-ui')
 STYLESHEET = '''
     <style>
         div.error {

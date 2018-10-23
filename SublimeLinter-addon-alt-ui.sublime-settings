@@ -25,5 +25,5 @@
 
     // Annotate (t.i. draw phantoms in Sublime speak) the buffer
     // with lint errors.
-    "annotate": true,
+    "annotations": true,
 }
