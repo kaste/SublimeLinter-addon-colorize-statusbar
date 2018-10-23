@@ -29,6 +29,9 @@ STYLESHEET = '''
     </style>
 '''
 PHANTOM_SET_NAME = 'sublime_linter'
+TOP_MARGIN = 1
+BOTTOM_MARGIN = 1
+
 
 State = {}
 PhantomSets = {}
@@ -118,7 +121,7 @@ def clear_phantoms(view):
     view.erase_phantoms(PHANTOM_SET_NAME)
 
 
-def draw(active_view, errors, margin=1, **kwargs):
+def draw(active_view, errors, **kwargs):
     if not Settings.get('annotations', False):
         return
 
@@ -139,7 +142,11 @@ def draw(active_view, errors, margin=1, **kwargs):
     # If you set a margin, phantoms around the current,
     # edited line will not be drawn to reduce clutter.
     cr = current_row(active_view)
-    rg = range(cr - margin + 1, cr + margin) if cr is not None else []
+    rg = (
+        range(cr - TOP_MARGIN + 1, cr + BOTTOM_MARGIN)
+        if cr is not None
+        else []
+    )
     phantoms = [
         phantom for row, phantom in all_phantoms.items() if row not in rg
     ]
