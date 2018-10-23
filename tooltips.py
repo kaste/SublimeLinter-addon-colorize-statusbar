@@ -5,6 +5,7 @@ import sublime_plugin
 from SublimeLinter.lint import persist, events
 
 from . import settings
+from .utils import get_visible_error_ids
 
 
 Settings = settings.Settings('SublimeLinter-addon-alt-ui')
@@ -99,7 +100,13 @@ def draw(active_view, current_pos, prev_pos, errors, **kwargs):
     row, col = current_pos
     prev_row, _ = prev_pos
 
-    errors_on_line = [error for error in errors if error['line'] == row]
+    visible_error_ids = get_visible_error_ids(active_view)
+
+    errors_on_line = [
+        error
+        for error in errors
+        if error['line'] == row and error['uid'] in visible_error_ids
+    ]
     errors_under_cursor = [
         error
         for error in errors_on_line
