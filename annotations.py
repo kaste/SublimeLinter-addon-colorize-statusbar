@@ -9,7 +9,25 @@ from . import settings
 
 
 Settings = settings.Settings('SublimeLinter-addon-alt-ui')
+STYLESHEET = '''
+    <style>
+        .container {
+            background-color: transparent;
+            color: #777;
+            background-color: var(--background);
+            color: color(var(--foreground) blend(black 70%));
 
+            border-left: 1px solid #777;
+            border-right: 1px solid #777;
+
+            font-size: .9em;
+            word-wrap: break-word;
+            padding: 0px 6px;
+            margin-top: 2px;
+            margin-left: 8px;
+        }
+    </style>
+'''
 PHANTOM_SET_NAME = 'sublime_linter'
 
 State = {}
@@ -145,38 +163,12 @@ def gen_phantoms(view, all_errors):
 
 
 def style_messages(messages):
-    html = (
-        '<div style="'
-        'background-color: #e62d96; '
-        'background-color: #ff3737; '
-        'background-color: #df5912; '
-        'background-color: #af1912; '
-        'background-color: transparent; '
-        # 'border-left: 2px solid #df5912;'
-        'border-left: 1px solid #777;'
-        'border-right: 1px solid #777;'
-        # 'background-color: #111; '
-        'font-size: .9em;'
-        'word-wrap: break-word;'
-        'color: #777; '
-        # 'color: #110; '
-        # 'color: #ddd; '
-        # 'color: #df5912; '
-        'padding: 0px 6px; '
-        'margin-top: 2px; '
-        'margin-left: 8px;'
-        #
-        # 'padding: 0px 1px; '
-        # 'margin-top: 1px; '
-        # 'margin-left: 3px;'
-        '">'
+    return (
+        STYLESHEET
+        + '<div class="container">'
+        + ''.join("<span>{}</span> ".format(message) for message in messages)
+        + '</div>'
     )
-    for message in messages:
-        html += "<span>{}</span> ".format(message)
-        break
-
-    html += "</div>"
-    return html
 
 
 def current_row(view):
