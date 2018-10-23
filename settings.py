@@ -1,5 +1,6 @@
 import sublime
 
+
 class Settings(object):
     def __init__(self, name):
         self.name = name
@@ -11,11 +12,14 @@ class Settings(object):
     @property
     def user(self):
         try:
-            return (sublime.active_window().active_view()
-                           .settings().get(self.name, {}))
-        except:
+            return (
+                sublime.active_window()
+                .active_view()
+                .settings()
+                .get(self.name, {})
+            )
+        except Exception:
             return {}
 
     def get(self, key, default=None):
         return self.user.get(key, self.global_.get(key, default))
-

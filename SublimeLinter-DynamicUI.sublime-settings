@@ -1,15 +1,29 @@
 {
 
-    "colorize-statusbar": true,
-
-    // The name of the setting we will set to true on errors. Add something
-    // like this to your theme.
+    // When a view has lint errors or warnings, we can set a key
+    // in the global user preferences. This key can then be used as
+    // a flag in Sublime themes. With that working, you can for
+    // exampletint your status bar for dirty views.
+    //
+    // E.g. add something like this to your theme.
     // {
         // "class": "status_bar",
-        // "settings": ["has_lint_errors"],
+        // "settings": ["has_lint_errors"],  // see below for the name
         // "layer0.tint": [215, 57, 18], // -00
         // "layer0.tint": [175, 57, 18], // -00
     // }
-    "set_on_errors": "has_lint_errors",
-    "set_on_warnings": "has_lint_warnings",
+    "flags": true,
+
+    // The name of the setting we will set to true on errors.
+    "flag_on_errors": "has_lint_errors",
+
+    // The name of the setting we will set to true on warnings.
+    "flag_on_warnings": "has_lint_warnings",
+
+    // Show small tooltips whenever you enter a line with an error.
+    "tooltips": true,
+
+    // Annotate (t.i. draw phantoms in Sublime speak) the buffer
+    // with lint errors.
+    "annotate": true,
 }

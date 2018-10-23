@@ -5,14 +5,16 @@ from SublimeLinter.lint import persist, events, queue, WARNING, ERROR
 from . import settings
 
 
+CHILL_TIME = 3
+DEBOUNCE_KEY = 'SL-ui-colorize-status-bar'
+
+
 Settings = settings.Settings('SublimeLinter-DynamicUI')
 State = {}
 
 
 def plugin_loaded():
-    State.update({
-        'active_view': sublime.active_window().active_view()
-    })
+    State.update({'active_view': sublime.active_window().active_view()})
 
     events.subscribe(events.LINT_RESULT, on_lint_result)
 
@@ -29,24 +31,24 @@ def on_lint_result(buffer_id, **kwargs):
 
 class ColorizeStatusbarSublimeLinterCommand(sublime_plugin.EventListener):
     def on_activated_async(self, active_view):
+        if active_view.settings().get('is_widget'):
+            return
+
         bid = active_view.buffer_id()
-        State.update({
-            'active_view': active_view
-        })
+        State.update({'active_view': active_view})
 
         draw(bid, immediate=True)
 
 
 def draw(bid, immediate=False):
-    if not Settings.get('colorize-statusbar', False):
+    if not Settings.get('flags', False):
         return
 
     current_errors = persist.errors[bid]
     flag = get_flag(current_errors)
 
-    delay = CHILL_TIME if flag or not immediate else 0
-    key = 'SL-ui-colorize-status-bar'
-    queue.debounce(lambda: set_flag(flag), delay=delay, key=key)
+    delay = CHILL_TIME if (flag and not immediate) else 0
+    queue.debounce(lambda: set_flag(flag), delay=delay, key=DEBOUNCE_KEY)
 
 
 def get_flag(errors):
@@ -64,12 +66,9 @@ def get_flag(errors):
         return None
 
 
-CHILL_TIME = 10
-
-
 def set_flag(flag):
-    on_errors = Settings.get('set_on_errors')
-    on_warnings = Settings.get('set_on_warnings')
+    on_errors = Settings.get('flag_on_errors')
+    on_warnings = Settings.get('flag_on_warnings')
 
     settings = sublime.load_settings('Preferences.sublime-settings')
     if flag == 'errors':

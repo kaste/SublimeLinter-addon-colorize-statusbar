@@ -12,9 +12,11 @@ STYLESHEET = '''
     <style>
         div.error {
             background-color: #af1912;
+            background-color: transparent;
             font-size: .9em;
 
             color: #ddd;
+            color: #eee;
             padding: 0 1px;
             margin-left: 8px;
         }
@@ -25,11 +27,13 @@ State = {}
 
 
 def plugin_loaded():
-    State.update({
-        'active_view': sublime.active_window().active_view(),
-        'current_pos': (-1, -1),
-        'errors': []
-    })
+    State.update(
+        {
+            'active_view': sublime.active_window().active_view(),
+            'current_pos': (-1, -1),
+            'errors': [],
+        }
+    )
 
     events.subscribe(events.LINT_RESULT, on_lint_result)
 
@@ -43,9 +47,8 @@ def on_lint_result(buffer_id, **kwargs):
     if active_view.buffer_id() != buffer_id:
         return
 
-    State.update({
-        'errors': get_errors(active_view)
-    })
+    _invalid_buffer.discard(buffer_id)
+    State.update({'errors': get_errors(active_view)})
     draw(**State)
 
 
@@ -53,11 +56,22 @@ class ShowTooltipsSublimeLinterCommand(sublime_plugin.EventListener):
     def on_activated_async(self, active_view):
         row, col = get_current_pos(active_view)
 
-        State.update({
-            'active_view': active_view,
-            'current_pos': (row, col),
-            'errors': get_errors(active_view)
-        })
+        State.update(
+            {
+                'active_view': active_view,
+                'current_pos': (row, col),
+                'errors': get_errors(active_view),
+            }
+        )
+
+    def on_modified(self, view):
+        active_view = State['active_view']
+        # It is possible that views (e.g. panels) update in the background.
+        # So we check here and return early.
+        if active_view.buffer_id() != view.buffer_id():
+            return
+
+        _invalid_buffer.add(active_view.buffer_id())
 
     def on_selection_modified_async(self, view):
         active_view = State['active_view']
@@ -66,49 +80,65 @@ class ShowTooltipsSublimeLinterCommand(sublime_plugin.EventListener):
         if active_view.buffer_id() != view.buffer_id():
             return
 
-        State.update({
-            'current_pos': get_current_pos(active_view)
-        })
+        current_pos = get_current_pos(active_view)
+        if current_pos == State['current_pos']:
+            return
 
+        State.update({'current_pos': current_pos})
+
+        # print('on_selection_modified_async')
         # sublime.set_timeout_async(lambda: draw(**State), 1)
         draw(**State)
 
 
 _last_row = None
+_last_col = None
 _last_errors_under_cursor = []
+_last_messages = ''
+_invalid_buffer = set()
 
 
 def draw(active_view, current_pos, errors, **kwargs):
-    global _last_row, _last_errors_under_cursor
+    if not Settings.get('tooltips', False):
+        return
+
+    global _last_row, _last_col, _last_errors_under_cursor, _last_messages
 
     row, col = current_pos
 
     errors_on_line = [error for error in errors if error['line'] == row]
     errors_under_cursor = [
-        error for error in errors_on_line
-        if error['start'] <= col <= error['end']]
+        error
+        for error in errors_on_line
+        if error['start'] <= col <= error['end']
+    ]
 
     errors_to_show = errors_under_cursor or errors_on_line
+    messages = [error['msg'] for error in errors_to_show]
 
-    if (
-        row == _last_row and
-        (len(errors_under_cursor) == 0 or
-         len(_last_errors_under_cursor) == len(errors_under_cursor))
+    # print(len(errors_under_cursor), len(_last_errors_under_cursor))
+    if row == _last_row and (
+        len(errors_under_cursor) == 0
+        or (
+            len(_last_errors_under_cursor) == len(errors_under_cursor)
+            and messages == _last_messages
+        )
     ):
         errors_to_show = []
 
     _last_row = row
+    _last_col = col
     _last_errors_under_cursor = errors_under_cursor
+    _last_messages = messages
 
-    html = get_html(
-        error['msg'] for error in errors_to_show)
+    html = get_html(error['msg'] for error in errors_to_show)
     display_popup(active_view.id(), html, row)
 
 
 def get_errors(view):
     return sorted(
         persist.errors[view.buffer_id()],
-        key=lambda e: (e['line'], e['error_type'], e['start'], e['linter'])
+        key=lambda e: (e['line'], e['error_type'], e['start'], e['linter']),
     )
 
 
@@ -121,18 +151,21 @@ def display_popup(vid, html, row):
         view.update_popup(html)
     else:
         last_char = last_char_of_row(view, row)
-        view.show_popup(html, sublime.COOPERATE_WITH_AUTO_COMPLETE,
-                        max_width=600, location=last_char)
+        view.show_popup(
+            html,
+            sublime.COOPERATE_WITH_AUTO_COMPLETE,
+            max_width=600,
+            location=last_char,
+        )
 
 
 def get_html(messages):
     message_divs = ''.join('<div>' + m + '</div>' for m in messages)
     return (
-        STYLESHEET +
-        '<div class="error">' +
-        message_divs +
-        '</div>'
-    ) if message_divs else ''
+        (STYLESHEET + '<div class="error">' + message_divs + '</div>')
+        if message_divs
+        else ''
+    )
 
 
 def get_current_pos(view):
@@ -143,4 +176,4 @@ def get_current_pos(view):
 
 
 def last_char_of_row(view, row):
-    return (view.text_point(row + 1, 0) - 1)
+    return view.text_point(row + 1, 0) - 1
