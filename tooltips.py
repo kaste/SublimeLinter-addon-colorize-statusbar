@@ -113,13 +113,24 @@ def draw(active_view, current_pos, prev_pos, errors, **kwargs):
             and messages == _last_messages
         )
     ):
-        errors_to_show = []
+        html = None
+    else:
+        html = get_html(messages)
 
     _last_errors_under_cursor = errors_under_cursor
     _last_messages = messages
 
-    html = get_html(error['msg'] for error in errors_to_show)
-    display_popup(active_view.id(), html, row)
+    if errors_under_cursor:
+        location = active_view.text_point(
+            row,
+            min(
+                last_char_of_row(active_view, row),
+                max(error['end'] for error in errors_under_cursor),
+            ),
+        )
+    else:
+        location = last_char_of_row(active_view, row)
+    display_popup(active_view.id(), html, location)
 
 
 def get_errors(view):
@@ -130,19 +141,15 @@ def get_errors(view):
 
 
 @lru_cache(maxsize=1)
-def display_popup(vid, html, row):
+def display_popup(vid, html, location):
     view = sublime.View(vid)
     if not html:
         view.hide_popup()
     elif view.is_popup_visible():
         view.update_popup(html)
     else:
-        last_char = last_char_of_row(view, row)
         view.show_popup(
-            html,
-            sublime.COOPERATE_WITH_AUTO_COMPLETE,
-            max_width=600,
-            location=last_char,
+            html, sublime.COOPERATE_WITH_AUTO_COMPLETE, location=location
         )
 
 
