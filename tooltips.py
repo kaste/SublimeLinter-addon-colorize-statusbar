@@ -10,15 +10,14 @@ from . import settings
 Settings = settings.Settings('SublimeLinter-addon-alt-ui')
 STYLESHEET = '''
     <style>
-        div.error {
-            background-color: #af1912;
-            background-color: transparent;
-            font-size: .9em;
+        .container {
+            background-color: var(--background);
+            color: var(--foreground);
+            color: color(var(--foreground) blend(white 50%));
 
-            color: #ddd;
-            color: #eee;
-            padding: 0 1px;
-            margin-left: 8px;
+            font-size: .9em;
+            padding: 0 1px 0 3px;
+            margin: -2px -4px;
         }
     </style>
 '''
@@ -162,7 +161,7 @@ def display_popup(vid, html, row):
 def get_html(messages):
     message_divs = ''.join('<div>' + m + '</div>' for m in messages)
     return (
-        (STYLESHEET + '<div class="error">' + message_divs + '</div>')
+        (STYLESHEET + '<div class="container">' + message_divs + '</div>')
         if message_divs
         else ''
     )
