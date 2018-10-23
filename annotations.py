@@ -166,7 +166,7 @@ def style_messages(messages):
     return (
         STYLESHEET
         + '<div class="container">'
-        + ''.join("<span>{}</span> ".format(message) for message in messages)
+        + '; '.join("<span>{}</span>".format(message) for message in messages)
         + '</div>'
     )
 
