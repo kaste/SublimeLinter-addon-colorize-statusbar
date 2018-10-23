@@ -52,12 +52,14 @@ def on_lint_result(buffer_id, **kwargs):
 
 class ShowTooltipsSublimeLinterCommand(sublime_plugin.EventListener):
     def on_activated_async(self, active_view):
-        row, col = get_current_pos(active_view)
+        prev_pos = State['current_pos']
+        current_pos = get_current_pos(active_view)
 
         State.update(
             {
                 'active_view': active_view,
-                'current_pos': (row, col),
+                'current_pos': current_pos,
+                'prev_pos': prev_pos,
                 'errors': get_errors(active_view),
             }
         )
@@ -69,30 +71,30 @@ class ShowTooltipsSublimeLinterCommand(sublime_plugin.EventListener):
         if active_view.buffer_id() != view.buffer_id():
             return
 
+        prev_pos = State['current_pos']
         current_pos = get_current_pos(active_view)
-        if current_pos == State['current_pos']:
+        if current_pos == prev_pos:
             return
 
-        State.update({'current_pos': current_pos})
+        State.update({'current_pos': current_pos, 'prev_pos': prev_pos})
 
         # print('on_selection_modified_async')
         # sublime.set_timeout_async(lambda: draw(**State), 1)
         draw(**State)
 
 
-_last_row = None
-_last_col = None
 _last_errors_under_cursor = []
 _last_messages = ''
 
 
-def draw(active_view, current_pos, errors, **kwargs):
+def draw(active_view, current_pos, prev_pos, errors, **kwargs):
     if not Settings.get('tooltips', False):
         return
 
-    global _last_row, _last_col, _last_errors_under_cursor, _last_messages
+    global _last_errors_under_cursor, _last_messages
 
     row, col = current_pos
+    prev_row, _ = prev_pos
 
     errors_on_line = [error for error in errors if error['line'] == row]
     errors_under_cursor = [
@@ -104,8 +106,7 @@ def draw(active_view, current_pos, errors, **kwargs):
     errors_to_show = errors_under_cursor or errors_on_line
     messages = [error['msg'] for error in errors_to_show]
 
-    # print(len(errors_under_cursor), len(_last_errors_under_cursor))
-    if row == _last_row and (
+    if row == prev_row and (
         len(errors_under_cursor) == 0
         or (
             len(_last_errors_under_cursor) == len(errors_under_cursor)
@@ -114,8 +115,6 @@ def draw(active_view, current_pos, errors, **kwargs):
     ):
         errors_to_show = []
 
-    _last_row = row
-    _last_col = col
     _last_errors_under_cursor = errors_under_cursor
     _last_messages = messages
 
