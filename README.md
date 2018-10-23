@@ -1,20 +1,14 @@
 
 Add-on to SublimeLinter which will do various UI blinking so you always know if your current file is green or red.
 
-** This includes a hack, and is a showcase plugin **
 
 
-# Install
+# Features
 
-1. Open up the command palette (`ctrl+shift+p`), and find `Package Control: Add Repository`. Then enter the URL of this repo: `https://github.com/kaste/SublimeLinter-Annotations/` in the input field.
-2. Open up the command palette again and find `Package Control: Install Package`, and just search for `SublimeLinter-Annotations`. (just a normal install)
+* It will set global flags which in turn can be used by a theme to indicate if a view/window has errors or warnings or is green to commit.
 
-
-# Usage
-
-This plugin [monkeypatches](https://github.com/kaste/SublimeLinter-Annotations/blob/master/monkeypatch_sublimelinter.py) the original SublimeLinter.
-
-* It will colorize your status bar if the current file your editing has warnings or errors. For this to work, you have to add the following to your theme file.
+E.g. if you want to tint your status bar, you could add something like this 
+to your `.sublime-theme` file. (Do this in your local override in the User folder.)
 
         {
             "class": "status_bar",
@@ -43,9 +37,18 @@ This plugin [monkeypatches](https://github.com/kaste/SublimeLinter-Annotations/b
 
   You can adjust the colors to your liking.
 
-* It shows tooltips for the line your on.
+* It popups tooltips if you enter a line with lint errors.
 
-* It shows phantoms as well.
+* It shows annotations/phantoms as well.
 
-You can't get more visual distraction ;-)
+You really can't get more visual distraction ;-)
+
+
+# Install
+
+I would recommend you just clone this repository into your packages folder.
+If you want to go fancy, you can also do this:
+
+1. Open up the command palette (`ctrl+shift+p`), and find `Package Control: Add Repository`. Then enter the URL of this repo: `https://github.com/kaste/SublimeLinter-addon-alt-ui/` in the input field.
+2. Open up the command palette again and find `Package Control: Install Package`, and just search for `SublimeLinter-addon-alt-ui`. (just a normal install)
 
