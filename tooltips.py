@@ -131,11 +131,10 @@ def draw(active_view, current_pos, prev_pos, errors, **kwargs):
     _last_messages = messages
 
     if html and (len(errors_to_show) == 1 or errors_under_cursor):
-        location = active_view.text_point(
-            row,
-            min(
-                last_char_of_row(active_view, row),
-                max(error['end'] for error in errors_to_show),
+        location = min(
+            last_char_of_row(active_view, row),
+            active_view.text_point(
+                row, max(error['end'] for error in errors_to_show)
             ),
         )
         # Do not show the tooltip on the left side of the cursor
