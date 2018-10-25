@@ -17,8 +17,8 @@ STYLESHEET = '''
             color: color(var(--foreground) blend(white 50%));
 
             font-size: .9em;
-            padding: 0 1px 0 3px;
-            margin: -2px -4px;
+            padding: 2px 1px 0 3px;
+            margin: 0px -4px -2px;
         }
     </style>
 '''
