@@ -49,7 +49,7 @@ def on_lint_result(buffer_id, **kwargs):
         return
 
     State.update({'errors': get_errors(active_view)})
-    draw(**State)
+    sublime.set_timeout_async(lambda: draw(**State), 1)
 
 
 class ShowTooltipsSublimeLinterCommand(sublime_plugin.EventListener):
