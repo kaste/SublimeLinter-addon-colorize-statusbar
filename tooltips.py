@@ -162,7 +162,10 @@ def display_popup(vid, html, location):
         view.update_popup(html)
     else:
         view.show_popup(
-            html, sublime.COOPERATE_WITH_AUTO_COMPLETE, location=location
+            html,
+            sublime.COOPERATE_WITH_AUTO_COMPLETE,
+            max_width=600,
+            location=location,
         )
 
 
