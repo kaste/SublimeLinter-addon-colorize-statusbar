@@ -20,10 +20,4 @@
     // The name of the setting we will set to true on warnings.
     "flag_on_warnings": "has_lint_warnings",
 
-    // Show small tooltips whenever you enter a line with an error.
-    "tooltips": true,
-
-    // Annotate (t.i. draw phantoms in Sublime speak) the buffer
-    // with lint errors.
-    "annotations": true,
 }
