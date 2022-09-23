@@ -1,20 +1,35 @@
 import sublime
 import sublime_plugin
-from SublimeLinter.lint import persist, events, queue, WARNING, ERROR
-
-from . import settings
+from SublimeLinter.lint import persist, events, util, queue, WARNING, ERROR
 
 
-CHILL_TIME = 3
+MYPY = False
+if MYPY:
+    from typing import TypedDict
+
+    State_ = TypedDict("State_", {"active_view": sublime.View}, total=False)
+
+
+CHILL_TIME = 0
 DEBOUNCE_KEY = 'SL-ui-colorize-status-bar'
 
 
-Settings = settings.Settings('SublimeLinter-addon-alt-ui')
-State = {}
+Settings = None  # type: sublime.Settings  # type: ignore[assignment]
+State = {}  # type: State_
 
 
 def plugin_loaded():
-    State.update({'active_view': sublime.active_window().active_view()})
+    global Settings
+    Settings = sublime.load_settings(
+        'SublimeLinter-addon-alt-ui.sublime-settings'
+    )
+    State.update(
+        {
+            'active_view': (
+                sublime.active_window().active_view() or sublime.View(-1)
+            )
+        }
+    )
 
     events.subscribe(events.LINT_RESULT, on_lint_result)
 
@@ -23,29 +38,34 @@ def plugin_unloaded():
     events.unsubscribe(events.LINT_RESULT, on_lint_result)
 
 
-def on_lint_result(buffer_id, **kwargs):
+def on_lint_result(filename, **kwargs):
     active_view = State['active_view']
-    if active_view.buffer_id() == buffer_id:
-        draw(buffer_id)
+    if util.canonical_filename(active_view) == filename:
+        draw(filename)
 
 
 class ColorizeStatusbarSublimeLinterCommand(sublime_plugin.EventListener):
-    def on_activated_async(self, active_view):
+    def on_activated_async(self, active_view: sublime.View) -> None:
         if active_view.settings().get('is_widget'):
             return
 
-        bid = active_view.buffer_id()
         State.update({'active_view': active_view})
 
-        draw(bid, immediate=True)
+        filename = util.canonical_filename(active_view)
+        draw(filename, immediate=True)
 
 
-def draw(bid, immediate=False):
+def draw(filename: str, immediate: bool = False) -> None:
     if not Settings.get('flags', False):
         return
 
-    current_errors = persist.errors[bid]
-    flag = get_flag(current_errors)
+    current_errors = persist.file_errors[filename]
+    linters_to_ignore = Settings.get('linters_to_ignore') or []
+    flag = get_flag(
+        error
+        for error in current_errors
+        if error["linter"] not in linters_to_ignore
+    )
 
     delay = CHILL_TIME if (flag and not immediate) else 0
     queue.debounce(lambda: set_flag(flag), delay=delay, key=DEBOUNCE_KEY)
@@ -69,6 +89,8 @@ def get_flag(errors):
 def set_flag(flag):
     on_errors = Settings.get('flag_on_errors')
     on_warnings = Settings.get('flag_on_warnings')
+    assert on_errors
+    assert on_warnings
 
     settings = sublime.load_settings('Preferences.sublime-settings')
     if flag == 'errors':

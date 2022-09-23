@@ -20,4 +20,5 @@
     // The name of the setting we will set to true on warnings.
     "flag_on_warnings": "has_lint_warnings",
 
+    "linters_to_ignore": ["annotations", "radon"]
 }

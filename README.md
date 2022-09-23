@@ -16,6 +16,13 @@ to your `.sublime-theme` file. (Do this in your local override in the User folde
             "layer0.tint": [215, 57, 18], // -00
         },
         {
+            "class": "label_control",
+            "settings": ["has_lint_errors"],
+            "parents": [{"class": "status_bar"}],
+            "color": [19, 21, 32], // 02
+            "font.size": 14
+        },
+        {
             "class": "status_bar",
             "settings": ["has_lint_warnings"],
             "layer0.tint": [88, 31, 158], // -00
@@ -27,21 +34,24 @@ to your `.sublime-theme` file. (Do this in your local override in the User folde
             "color": [219, 221, 232], // 02
             "font.size": 14
         },
-        {
-            "class": "label_control",
-            "settings": ["has_lint_errors"],
-            "parents": [{"class": "status_bar"}],
-            "color": [19, 21, 32], // 02
-            "font.size": 14
-        },
 
-  You can adjust the colors to your liking.
+*OR* something like this
 
-* It popups tooltips if you enter a line with lint errors.
+    {
+        "class": "status_container",
+        "settings": ["has_lint_errors"],
+        "layer0.tint": [215, 57, 118, 190], // -00
+    },
+    {
+        "class": "label_control",
+        "settings": ["has_lint_errors"],
+        "parents": [{"class": "status_container"}],
+        "color": [219, 221, 232], // 02
+    },
 
-* It shows annotations/phantoms as well.
+So you might try styling `status_bar` or `status_container`.  I use the latter.
 
-You really can't get more visual distraction ;-)
+You can adjust the colors to your liking.
 
 
 # Install
