@@ -21,7 +21,7 @@ State = {}  # type: State_
 def plugin_loaded():
     global Settings
     Settings = sublime.load_settings(
-        'SublimeLinter-addon-alt-ui.sublime-settings'
+        'SublimeLinter-addon-colorize-statusbar.sublime-settings'
     )
     State.update(
         {

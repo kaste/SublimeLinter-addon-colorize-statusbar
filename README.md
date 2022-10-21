@@ -53,7 +53,7 @@ So you might try styling `status_bar` or `status_container`.  I use the latter.
 
 You can adjust the colors to your liking of course.  Just notice the usage of the two special keys `has_lint_errors` and `has_lint_warnings`.
 
-Maybe take a quick look at the [global settings](https://github.com/kaste/SublimeLinter-addon-alt-ui/blob/master/SublimeLinter-addon-alt-ui.sublime-settings).
+Maybe take a quick look at the [global settings](https://github.com/kaste/SublimeLinter-addon-colorize-statusbar/blob/master/SublimeLinter-addon-colorize-statusbar.sublime-settings).
 
 
 # Install
@@ -61,6 +61,6 @@ Maybe take a quick look at the [global settings](https://github.com/kaste/Sublim
 I would recommend you just clone this repository into your packages folder.
 If you want to go fancy, you can also do this:
 
-1. Open up the command palette (`ctrl+shift+p`), and find `Package Control: Add Repository`. Then enter the URL of this repo: `https://github.com/kaste/SublimeLinter-addon-alt-ui/` in the input field.
-2. Open up the command palette again and find `Package Control: Install Package`, and just search for `SublimeLinter-addon-alt-ui`. (just a normal install)
+1. Open up the command palette (`ctrl+shift+p`), and find `Package Control: Add Repository`. Then enter the URL of this repo: `https://github.com/kaste/SublimeLinter-addon-colorize-statusbar/` in the input field.
+2. Open up the command palette again and find `Package Control: Install Package`, and just search for `SublimeLinter-addon-colorize-statusbar`. (just a normal install)
 
