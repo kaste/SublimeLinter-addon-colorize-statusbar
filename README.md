@@ -1,5 +1,5 @@
 
-Add-on to SublimeLinter which will do various UI blinking so you always know if your current file is green or red.
+Add-on to SublimeLinter which help you to colorize the status bar (or some other theme-ish thing) when the current view has errors.
 
 
 
@@ -51,7 +51,9 @@ to your `.sublime-theme` file. (Do this in your local override in the User folde
 
 So you might try styling `status_bar` or `status_container`.  I use the latter.
 
-You can adjust the colors to your liking.
+You can adjust the colors to your liking of course.  Just notice the usage of the two special keys `has_lint_errors` and `has_lint_warnings`.
+
+Maybe take a quick look at the [global settings](https://github.com/kaste/SublimeLinter-addon-alt-ui/blob/master/SublimeLinter-addon-alt-ui.sublime-settings).
 
 
 # Install
