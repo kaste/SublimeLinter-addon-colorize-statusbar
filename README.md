@@ -1,7 +1,8 @@
 
 Add-on to SublimeLinter which help you to colorize the status bar (or some other theme-ish thing) when the current view has errors.
 
-☝️ **NOTE: You have to do something to make this work. Read below 👇**
+☝️ **NOTE: You have to do something to make this work. Read below** 👇
+
 
 # Features
 
