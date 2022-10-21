@@ -21,4 +21,10 @@
     "flag_on_warnings": "has_lint_warnings",
 
     "linters_to_ignore": ["annotations", "radon"]
+
+    // As we're all distracted enough, only paint (or flag) the
+    // status bar differently if errors are *outside* of your current
+    // viewport.  (Errors within the viewport you probably notice
+    // already)
+    "only_if_errors_outside_of_visible_region": true,
 }

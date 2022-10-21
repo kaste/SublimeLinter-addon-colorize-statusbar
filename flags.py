@@ -61,10 +61,29 @@ def draw(filename: str, immediate: bool = False) -> None:
 
     current_errors = persist.file_errors[filename]
     linters_to_ignore = Settings.get('linters_to_ignore') or []
-    flag = get_flag(
-        error
-        for error in current_errors
-        if error["linter"] not in linters_to_ignore
+    only_if_errors_outside_of_visible_region = Settings.get(
+        'only_if_errors_outside_of_visible_region', True
+    )
+    visible_region = State["active_view"].visible_region()
+    flag = (
+        None
+        # The idea is that if an error is within the `visible_region`
+        # the user already is notified and disturbed enough and
+        # does not need any further visual hint.  So `None` is the
+        # correct answer then.
+        if (
+            only_if_errors_outside_of_visible_region
+            and any(
+                error
+                for error in current_errors
+                if visible_region.contains(error["region"])
+            )
+        )
+        else get_flag(
+            error
+            for error in current_errors
+            if error["linter"] not in linters_to_ignore
+        )
     )
 
     delay = CHILL_TIME if (flag and not immediate) else 0
