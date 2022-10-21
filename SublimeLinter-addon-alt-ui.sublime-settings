@@ -20,7 +20,9 @@
     // The name of the setting we will set to true on warnings.
     "flag_on_warnings": "has_lint_warnings",
 
-    "linters_to_ignore": ["annotations", "radon"]
+    // The name of (usually not so important) linters whose errors
+    // we will just ignore.
+    "linters_to_ignore": ["annotations", "radon"],
 
     // As we're all distracted enough, only paint (or flag) the
     // status bar differently if errors are *outside* of your current
