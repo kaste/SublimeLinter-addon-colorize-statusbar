@@ -59,7 +59,8 @@ Maybe take a quick look at the [global settings](https://github.com/kaste/Sublim
 
 # Install
 
-I would recommend you just clone this repository into your packages folder.
+Just use [Package Control](https://packagecontrol.io/) or clone this repository into your packages folder.
+
 If you want to go fancy, you can also do this:
 
 1. Open up the command palette (`ctrl+shift+p`), and find `Package Control: Add Repository`. Then enter the URL of this repo: `https://github.com/kaste/SublimeLinter-addon-colorize-statusbar/` in the input field.
