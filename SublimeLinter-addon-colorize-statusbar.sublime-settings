@@ -1,5 +1,4 @@
 {
-
     // When a view has lint errors or warnings, we can set a key
     // in the global user preferences. This key can then be used as
     // a flag in Sublime themes. With that working, you can for
